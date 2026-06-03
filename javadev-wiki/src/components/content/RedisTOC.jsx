@@ -89,7 +89,7 @@ export function RedisTOC({ sections }) {
           }`}
         >
           <div className="min-h-0 overflow-hidden">
-            <div className="border border-t-0 border-border rounded-b-sm max-h-64 overflow-y-auto">
+            <div className="border border-t-0 border-border rounded-b-sm max-h-72 overflow-y-auto">
               <div className="grid grid-cols-2 p-2">
                 {sections.map(({ id, title }) => (
                   <a

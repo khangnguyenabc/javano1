@@ -3,18 +3,64 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import Fuse from 'fuse.js'
 import { categories } from '../data/categories'
+import { redisData } from '../data/redis'
+import { networkingData } from '../data/networking'
+import { designPatternsData } from '../data/designPatterns'
 import SearchBar from '../components/ui/SearchBar'
 
-/* ─── Fuse instance (module-level, created once) ─────────────── */
+/* ─── Build search corpus ─────────────────────────────────────── */
 
-const fuse = new Fuse(categories, {
-  keys: ['title', 'subtitle', 'tags', 'subTopics'],
-  threshold: 0.3,
+function extractText(content) {
+  return content
+    .flatMap((b) => {
+      if (b.type === 'text' || b.type === 'subheading' || b.type === 'warning' || b.type === 'tip') {
+        return [b.value]
+      }
+      if (b.type === 'list') return b.items
+      return []
+    })
+    .join(' ')
+}
+
+function buildSectionItems(data) {
+  return data.sections.map((section) => ({
+    type: 'section',
+    id: `${data.slug}#${section.id}`,
+    slug: data.slug,
+    sectionId: section.id,
+    title: section.title,
+    badge: section.badge,
+    tags: [section.badge],
+    parentTitle: data.title,
+    content: extractText(section.content),
+  }))
+}
+
+const categoryItems = categories.map((c) => ({ type: 'category', ...c }))
+
+const sectionItems = [
+  ...buildSectionItems(redisData),
+  ...buildSectionItems(networkingData),
+  ...buildSectionItems(designPatternsData),
+]
+
+const corpus = [...categoryItems, ...sectionItems]
+
+const fuse = new Fuse(corpus, {
+  keys: [
+    { name: 'title',       weight: 0.4 },
+    { name: 'tags',        weight: 0.2 },
+    { name: 'content',     weight: 0.2 },
+    { name: 'subtitle',    weight: 0.1 },
+    { name: 'subTopics',   weight: 0.05 },
+    { name: 'parentTitle', weight: 0.05 },
+  ],
+  threshold: 0.35,
   includeScore: true,
   includeMatches: true,
 })
 
-/* ─── Skeleton rows ─────────────────────────────────────────── */
+/* ─── Skeleton ───────────────────────────────────────────────── */
 
 function SkeletonRow() {
   return (
@@ -45,12 +91,9 @@ function SkeletonRows() {
   )
 }
 
-/* ─── Result row ─────────────────────────────────────────────── */
+/* ─── Category result row ────────────────────────────────────── */
 
-/**
- * @param {{ item: object, matches: array, staggerIndex: number }} props
- */
-function ResultRow({ item, matches, staggerIndex }) {
+function CategoryResultRow({ item, matches, staggerIndex }) {
   const matchedTags = useMemo(
     () =>
       new Set(
@@ -118,7 +161,63 @@ function ResultRow({ item, matches, staggerIndex }) {
   )
 }
 
-/* ─── Empty state ────────────────────────────────────────────── */
+/* ─── Section result row ─────────────────────────────────────── */
+
+function SectionResultRow({ item, staggerIndex }) {
+  return (
+    <Link
+      to={`/topics/${item.slug}#${item.sectionId}`}
+      className="
+        group flex items-start gap-4 py-5 sm:py-6 px-4
+        border-b border-border
+        border-l-[3px] border-l-transparent hover:border-l-accent
+        hover:bg-surface transition-colors duration-150
+        animate-fade-up
+      "
+      style={{ animationDelay: `${staggerIndex * 50}ms` }}
+    >
+      {/* § glyph instead of module numeral — visually distinct from category results */}
+      <span className="font-serif text-accent text-sm font-bold w-8 shrink-0 pt-1 leading-none select-none" aria-hidden="true">
+        §
+      </span>
+
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start gap-2 mb-1.5 flex-wrap">
+          <h2 className="font-serif font-bold text-lg text-primary leading-snug min-w-0">
+            {item.title}
+          </h2>
+          <span className="font-sans text-[10px] text-faint border border-border rounded px-1.5 py-0.5 leading-none self-start mt-1 whitespace-nowrap shrink-0">
+            {item.badge}
+          </span>
+        </div>
+        <p className="font-serif italic text-sm text-muted leading-relaxed">
+          in {item.parentTitle}
+        </p>
+      </div>
+
+      <div className="flex flex-col items-end gap-2 shrink-0 pt-0.5">
+        <span className="font-sans text-[10px] text-faint whitespace-nowrap">section</span>
+        <span
+          className="font-serif text-muted group-hover:text-accent transition-colors"
+          aria-hidden="true"
+        >
+          →
+        </span>
+      </div>
+    </Link>
+  )
+}
+
+/* ─── Unified result row ─────────────────────────────────────── */
+
+function ResultRow({ item, matches, staggerIndex }) {
+  if (item.type === 'section') {
+    return <SectionResultRow item={item} staggerIndex={staggerIndex} />
+  }
+  return <CategoryResultRow item={item} matches={matches} staggerIndex={staggerIndex} />
+}
+
+/* ─── Empty state ─────────────────────────────────────────────── */
 
 function EmptyState({ query }) {
   return (
@@ -149,13 +248,13 @@ function DefaultPrompt() {
         Start typing to search across all 13 modules.
       </p>
       <p className="font-sans text-sm text-faint">
-        Covers topics, patterns, tags, and sub-topics.
+        Covers topics, patterns, tags, and 60 sections of in-depth content.
       </p>
     </div>
   )
 }
 
-/* ─── Page ───────────────────────────────────────────────────── */
+/* ─── Page ────────────────────────────────────────────────────── */
 
 export default function SearchPage() {
   const [searchParams] = useSearchParams()
@@ -165,19 +264,16 @@ export default function SearchPage() {
   const [localQuery, setLocalQuery] = useState(urlQuery)
   const [showSkeleton, setShowSkeleton] = useState(!!urlQuery)
 
-  // Auto-focus on mount
   useEffect(() => {
     inputRef.current?.focus()
   }, [])
 
-  // Dismiss skeleton after initial render
   useEffect(() => {
     if (!showSkeleton) return
     const t = setTimeout(() => setShowSkeleton(false), 350)
     return () => clearTimeout(t)
-  }, []) // intentional empty deps — once on mount
+  }, []) // intentional — once on mount
 
-  // Sync URL → input when navigating here from another page
   useEffect(() => {
     setLocalQuery(urlQuery)
   }, [urlQuery])
@@ -196,7 +292,7 @@ export default function SearchPage() {
     <div className="max-w-4xl mx-auto py-12 sm:py-16">
       <Helmet>
         <title>{pageTitle}</title>
-        <meta name="description" content="Search across all 13 Java backend modules." />
+        <meta name="description" content="Search across all 13 Java backend modules and 60 sections of in-depth content." />
       </Helmet>
 
       <div className="mb-8">
@@ -240,7 +336,6 @@ export default function SearchPage() {
       ) : (
         <DefaultPrompt />
       )}
-
     </div>
   )
 }

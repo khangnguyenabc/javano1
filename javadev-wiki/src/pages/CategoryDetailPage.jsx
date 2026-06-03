@@ -6,6 +6,7 @@ import { useProgress } from '../context/ProgressContext'
 import Breadcrumb from '../components/ui/Breadcrumb'
 import { redisData } from '../data/redis'
 import { networkingData } from '../data/networking'
+import { designPatternsData } from '../data/designPatterns'
 import { SectionBlock } from '../components/content/SectionBlock'
 import { RedisTOC } from '../components/content/RedisTOC'
 
@@ -280,9 +281,12 @@ export default function CategoryDetailPage() {
     return () => observer.disconnect()
   }, [slug])
 
-  const pageData = slug === 'caching-redis'  ? redisData
-                 : slug === 'networking'      ? networkingData
+  const pageData = slug === 'caching-redis'    ? redisData
+                 : slug === 'networking'        ? networkingData
+                 : slug === 'design-patterns'   ? designPatternsData
                  : null
+
+  const barColor = slug === 'design-patterns' ? '#ec4899' : '#d85a30'
 
   /* ── 404 ──────────────────────────────────────────────────── */
 
@@ -321,8 +325,8 @@ export default function CategoryDetailPage() {
           aria-hidden="true"
         >
           <div
-            className="h-full bg-accent"
-            style={{ width: `${scrollPct}%`, transition: 'width 100ms linear' }}
+            className="h-full"
+            style={{ width: `${scrollPct}%`, backgroundColor: barColor, transition: 'width 100ms linear' }}
           />
         </div>
 

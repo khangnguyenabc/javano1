@@ -35,8 +35,10 @@ javadev-wiki/
 │   ├── index.css                   # CSS tokens + Tailwind directives + base styles
 │   │
 │   ├── data/
-│   │   ├── categories.js           # 13 category objects (SINGLE SOURCE OF TRUTH)
-│   │   └── redis.js                # redisData — full content cho /topics/caching-redis
+│   │   ├── categories.js           # 14 category objects (SINGLE SOURCE OF TRUTH)
+│   │   ├── redis.js                # redisData — 27 sections cho /topics/caching-redis
+│   │   ├── networking.js           # networkingData — 19 sections cho /topics/networking
+│   │   └── designPatterns.js       # designPatternsData — 14 sections cho /topics/design-patterns
 │   │
 │   ├── context/
 │   │   ├── ThemeContext.jsx        # theme, toggle, isDark — localStorage key: javadev-theme
@@ -46,10 +48,10 @@ javadev-wiki/
 │   │   └── useCategories.js        # useCategories() → array; useCategoryBySlug(slug) → object|undefined
 │   │
 │   ├── pages/
-│   │   ├── HomePage.jsx            # Hero + Stats + CategoryGrid + RoadmapTeaser
-│   │   ├── CategoryListPage.jsx    # Filter tabs + danh sách rows có animation stagger
-│   │   ├── CategoryDetailPage.jsx  # ⚠️ DUAL BEHAVIOR (xem mục 6)
-│   │   ├── SearchPage.jsx          # Fuse.js search + URL sync (?q=) + skeleton
+│   │   ├── HomePage.jsx            # Hero + Stats(60) + FeaturedSection(3 complete) + CategoryGrid + RoadmapTeaser
+│   │   ├── CategoryListPage.jsx    # Filter tabs + rows sorted (detail-ready first) + Complete/Coming soon badges
+│   │   ├── CategoryDetailPage.jsx  # ⚠️ TRIPLE BEHAVIOR (xem mục 6)
+│   │   ├── SearchPage.jsx          # Fuse.js — index categories + 60 sections; section results link to #anchor
 │   │   ├── RoadmapPage.jsx         # Timeline 8 tuần + Books + Resources (static data)
 │   │   └── NotFoundPage.jsx        # 404
 │   │
@@ -66,7 +68,7 @@ javadev-wiki/
 │   │   │   ├── ThemeToggle.jsx     # Sun/Moon SVG icon button
 │   │   │   └── ScrollToTop.jsx     # Fixed bottom-right, hiện sau scroll 400px
 │   │   │
-│   │   └── content/               # ⚠️ CHỈ dùng cho Redis detail page
+│   │   └── content/               # Dùng cho tất cả detail pages (Redis, Networking, Design Patterns)
 │   │       ├── index.js            # Barrel export tất cả content components
 │   │       ├── TextBlock.jsx       # <p> font-serif text-muted
 │   │       ├── SubHeading.jsx      # <h3> font-serif bold, border-b
@@ -74,8 +76,8 @@ javadev-wiki/
 │   │       ├── ListBlock.jsx       # <ul> list-none, em dash (—) in accent color
 │   │       ├── TableBlock.jsx      # overflow-x-auto -mx-4 px-4, min-w-max (mobile scroll)
 │   │       ├── CodeBlock.jsx       # Dark bg #1a1a18, copy button, lang badge, min-h-[44px]
-│   │       ├── BadgePill.jsx       # Colored pill: "Core concept"|"Production"|"Pattern"|...
-│   │       ├── SectionBlock.jsx    # Render 1 section với header + BadgePill + content[]
+│   │       ├── BadgePill.jsx       # Colored pill — xem mục 8 để biết full color map
+│   │       ├── SectionBlock.jsx    # Render 1 section với header + BadgePill + content[] (8 types)
 │   │       └── RedisTOC.jsx        # Desktop sticky sidebar + Mobile accordion (grid-rows animation)
 │   │
 │   └── assets/
@@ -127,7 +129,7 @@ Dùng trong Tailwind: `text-primary`, `bg-surface`, `border-border`, `text-accen
 
 ## 4. Data Layer
 
-### `src/data/categories.js` — 13 categories
+### `src/data/categories.js` — 14 categories
 
 Mỗi category object có:
 ```js
@@ -136,7 +138,7 @@ Mỗi category object có:
   slug: string,           // URL segment: /topics/:slug
   title: string,
   subtitle: string,
-  module: string,         // 'I.' đến 'XIII.'
+  module: string,         // 'I.' đến 'XIV.' (14 modules thực tế)
   tags: string[],         // hiện tối đa 3 ở UI
   subTopics: string[],    // dùng cho generic detail page
   description: string,
@@ -150,29 +152,35 @@ Mỗi category object có:
 
 Accessed qua hook `useCategories()` (sync, không async).
 
-### `src/data/redis.js` — redisData
+### Detail page data files — cấu trúc chung
 
-Cấu trúc đặc biệt cho `/topics/caching-redis`:
+Cả 3 file (`redis.js`, `networking.js`, `designPatterns.js`) cùng schema:
 ```js
 {
-  slug: 'caching-redis',
-  module: 'VIII.',
-  title: 'Caching — Redis Advanced',
+  slug: string,
+  module: string,
+  title: string,
   description: string,
   tags: string[],
   stats: [{ num: string, label: string }],  // 3 stats cho hero
   sections: [
     {
-      id: string,           // anchor id, dùng cho TOC + scroll
+      id: string,        // anchor id — dùng cho TOC + scroll + search
       title: string,
-      badge: string,        // 'Core concept'|'Production'|'Pattern'|'Redis 5+'|'Redis 6+'|'Redis 7+'|'Reference'|'Redis Stack'
+      badge: string,     // xem BadgePill color map ở mục 8
       content: ContentBlock[]
     }
   ]
 }
 ```
 
-**ContentBlock types:**
+| File | slug | Sections | Badges dùng |
+|---|---|---|---|
+| `redis.js` | `caching-redis` | 27 | Core concept, Pattern, Production, Redis 5+/6+/7+, Redis Stack, Reference |
+| `networking.js` | `networking` | 19 | Core concept, Advanced, Production, Reference |
+| `designPatterns.js` | `design-patterns` | 14 | Core concept, GoF Patterns, Architecture, Enterprise Patterns, DDD, Reference |
+
+**ContentBlock types** (8 types — tất cả handled bởi SectionBlock):
 ```js
 { type: 'text',       value: string }
 { type: 'subheading', value: string }
@@ -181,9 +189,10 @@ Cấu trúc đặc biệt cho `/topics/caching-redis`:
 { type: 'tip',        value: string }
 { type: 'list',       items: string[] }
 { type: 'table',      headers: string[], rows: string[][] }
+{ type: 'grid',       items: [{ title: string, body: string }] }
 ```
 
-27 sections — tất cả content tiếng Việt.
+**Code langs được dùng**: `java`, `redis`, `bash`, `python`, `lua`, `properties`, `text`, `cisco` — CodeBlock không có whitelist, nhận bất kỳ string nào.
 
 ---
 
@@ -208,55 +217,60 @@ Layout wrapper (`Layout.jsx`) bao gồm:
 
 ---
 
-## 6. CategoryDetailPage — Dual Behavior (QUAN TRỌNG)
+## 6. CategoryDetailPage — Triple Behavior (QUAN TRỌNG)
 
-File `src/pages/CategoryDetailPage.jsx` xử lý 2 loại trang khác nhau:
+File `src/pages/CategoryDetailPage.jsx` xử lý 3 loại trang:
 
-### Branch 1: `slug === 'caching-redis'` → Redis Detail Page
+```js
+const pageData = slug === 'caching-redis'   ? redisData
+               : slug === 'networking'       ? networkingData
+               : slug === 'design-patterns'  ? designPatternsData
+               : null
 ```
-Early return sau 404 check
-├── <Helmet> title: "Redis Advanced — JavaDev.wiki"
-├── Fixed progress bar: top-[52px] md:top-14 (ngay dưới navbar)
-│   └── width = scrollPct% — animate 100ms linear
+
+### Branch 1: Full-content Article Page (`pageData !== null`)
+
+Áp dụng cho: `caching-redis`, `networking`, `design-patterns`
+
+```
+├── <Helmet> title: "{pageData.title} — JavaDev.wiki"
+├── Fixed reading progress bar: top-[52px] md:top-14
+│   └── barColor: #d85a30 (Redis/Networking) | #ec4899 (Design Patterns — pink)
 └── <div py-8 sm:py-12>
-    ├── <RedisHero scrollPct={scrollPct}>
-    │   ├── Breadcrumb (custom nav, dùng Link)
-    │   └── Hero block: module + h1 + description + tags + stats (3 items grid-cols-3)
-    │       └── Hero bottom bar: gradient #d85a30 → #e8763a (decorative)
-    ├── Mobile TOC (md:hidden):
-    │   ├── <RedisTOC sections={redisData.sections} />
-    │   └── "{n} sections · ~45 min read" font-mono text-xs text-faint
+    ├── <ArticleHero data={pageData} scrollPct={scrollPct}>
+    │   ├── Breadcrumb (inline nav — Home / Topics / title)
+    │   ├── module + h1 + description + tags
+    │   ├── Stats grid (3 items)
+    │   └── Hero bottom: gradient progress indicator
+    ├── Mobile (md:hidden):
+    │   ├── <RedisTOC sections={pageData.sections} />
+    │   └── "{n} sections · ~{estimatedMinutes} min read"
     └── Grid md:grid-cols-[220px_1fr] lg:grid-cols-[260px_1fr] gap-8 lg:gap-12
         ├── <aside hidden md:block>
-        │   └── <RedisTOC sections={redisData.sections} />
+        │   └── <RedisTOC sections={pageData.sections} />
         └── <article>
-            ├── {redisData.sections.map(s => <SectionBlock section={s} />)}
-            └── Bottom nav: flex-col sm:flex-row, "← Back" + "↑ Back to top"
+            ├── {pageData.sections.map(s => <SectionBlock section={s} />)}
+            └── Bottom nav: flex-col sm:flex-row — "← Back" + "↑ Back to top"
 ```
 
-### Branch 2: Generic Category Page (tất cả slugs khác)
+### Branch 2: Generic Category Page (tất cả slugs còn lại)
+
 ```
-const done = getProgressForCategory(slug)
-return (
-  <div py-8 sm:py-12>
-  ├── <Helmet> title: "{category.title} — JavaDev.wiki"
-  ├── <Breadcrumb items=[Home/Topics/title]>
-  ├── <ProgressBar done total> — % completion bar
-  ├── Mobile (md:hidden): <MobileTOC subTopics>  (accordion, generic)
-  └── Flex md:flex-row gap-12
-      ├── <aside hidden md:block w-56>
-      │   └── <DesktopTOC subTopics activeId> (generic, border-l-2 active)
-      └── <article flex-1>
-          ├── Header: module badge + h1 + description + meta pills + tags
-          ├── {category.subTopics.map(topic => <SubTopicSection>)}
-          │   SubTopicSection = h2 + placeholder dashed card + <MarkDoneButton>
-          ├── References (static PLACEHOLDER_REFS)
-          └── Footer nav: ← Back to all topics
+├── <Helmet> title: "{category.title} — JavaDev.wiki"
+├── <Breadcrumb> + <ProgressBar>
+├── Mobile: <MobileTOC subTopics> (accordion)
+└── Flex md:flex-row gap-12
+    ├── <aside> <DesktopTOC subTopics activeId>
+    └── <article>
+        ├── Header: module + h1 + description + meta pills + tags
+        ├── {subTopics.map → <SubTopicSection>}  ← placeholder + MarkDoneButton
+        ├── References (PLACEHOLDER_REFS)
+        └── Footer nav
 ```
 
 **State dùng chung** (hooks không conditional):
-- `scrollPct` — đọc từ window.scrollY / total
-- `activeId` — IntersectionObserver cho generic TOC
+- `scrollPct` — window.scrollY / total scroll height × 100
+- `activeId` — IntersectionObserver cho generic TOC (`rootMargin: '-64px 0px -60% 0px'`)
 - `sectionRefs` — ref map cho generic sections
 
 ---
@@ -318,10 +332,22 @@ Tất cả export từ `src/components/content/index.js`.
 - Copy button: copies to clipboard, hiện "Copied!" 2 giây rồi về "Copy"
 
 ### BadgePill `{ badge }`
-Colored rounded pill. Map:
-- "Core concept" → amber | "Production" → red | "Pattern" → blue
-- "Redis 5+", "Redis 6+" → purple | "Redis 7+" → violet
-- "Reference" → gray | "Redis Stack" → teal
+Colored rounded pill. Full color map (fallback: gray):
+
+| Badge | Color |
+|---|---|
+| Core concept | amber |
+| Production | red |
+| Pattern | blue |
+| Redis 5+ / Redis 6+ | purple |
+| Redis 7+ | violet |
+| Redis Stack | teal |
+| Reference | gray |
+| GoF Patterns | pink |
+| Architecture | indigo |
+| Enterprise Patterns | rose |
+| DDD | emerald |
+| Advanced | sky |
 
 ### SectionBlock `{ section: {id, title, badge, content[]} }`
 - `<section id={section.id} scroll-mt-24 mb-16>`
@@ -331,12 +357,13 @@ Colored rounded pill. Map:
 - Dispatch `content[]` qua `renderBlock` switch
 
 ### RedisTOC `{ sections: [{id, title, badge}] }`
+Dùng chung cho cả 3 detail pages (Redis 27, Networking 19, Design Patterns 14 sections).
 - **Desktop** (`hidden md:block`): `sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto`
   - Active link: `text-accent border-l-2 border-accent bg-surface font-medium`
   - IntersectionObserver threshold 0.3
 - **Mobile** (`md:hidden`): accordion button `min-h-[48px]`
   - Smooth animation: `grid-rows-[0fr→1fr]` CSS transition (không dùng conditional render)
-  - Nội dung: `max-h-64 overflow-y-auto`, `grid grid-cols-2`
+  - Nội dung: `max-h-72 overflow-y-auto` (72 để chứa đủ 14–27 sections), `grid grid-cols-2`
   - Mỗi link: `min-h-[40px] flex items-center`
   - Caret xoay 180° khi mở bằng `rotate-180`
 
@@ -344,7 +371,7 @@ Colored rounded pill. Map:
 
 ## 9. Mobile QA — Các fix đã áp dụng
 
-Target: 375px (iPhone SE). Tất cả đã fix:
+Target: 375px (iPhone SE). Tất cả đã fix và verified bằng Playwright:
 
 | Component | Vấn đề | Fix |
 |---|---|---|
@@ -355,6 +382,7 @@ Target: 375px (iPhone SE). Tất cả đã fix:
 | `SectionBlock` | h2 quá to, badge tràn | `text-xl sm:text-2xl`, `flex-wrap items-start` |
 | `RedisTOC` | Button nhỏ | `min-h-[48px]` |
 | `RedisTOC` | Accordion giật | `grid-rows-[0fr→1fr]` CSS transition |
+| `RedisTOC` | Overflow cho 14–27 sections | `max-h-72` (tăng từ max-h-64) |
 | `CategoryDetailPage` | Description quá to | `text-base sm:text-lg` |
 | `CategoryDetailPage` | Bottom nav ngang | `flex-col sm:flex-row gap-3` |
 | `index.css` | Page horizontal scroll | `overflow-x: hidden` trên body |
@@ -407,19 +435,76 @@ setScrollPct(total > 0 ? (window.scrollY / total) * 100 : 0)
 ## 11. Thêm module mới (checklist)
 
 1. Thêm object vào `src/data/categories.js` với slug, module, subTopics...
-2. Nếu là trang full-content (như Redis): tạo `src/data/{slug}.js` với cấu trúc sections[]
-3. Trong `CategoryDetailPage.jsx`: thêm early-return branch cho slug mới
-4. Tạo Hero component riêng nếu cần (tương tự `RedisHero`)
-5. Không cần thêm route — `topics/:slug` đã bao phủ tất cả
+2. Nếu là trang full-content: tạo `src/data/{slug}.js` với cấu trúc `{ slug, module, title, description, tags, stats, sections[] }`
+3. Trong `CategoryDetailPage.jsx`: thêm branch vào `pageData` const:
+   ```js
+   const pageData = slug === 'caching-redis'   ? redisData
+                  : slug === 'networking'       ? networkingData
+                  : slug === 'design-patterns'  ? designPatternsData
+                  : slug === '{new-slug}'       ? newData   // ← thêm đây
+                  : null
+   ```
+   Và thêm `barColor` nếu muốn màu khác.
+4. Trong `SearchPage.jsx`: import data file mới và thêm vào `sectionItems`:
+   ```js
+   const sectionItems = [
+     ...buildSectionItems(redisData),
+     ...buildSectionItems(networkingData),
+     ...buildSectionItems(designPatternsData),
+     ...buildSectionItems(newData),   // ← thêm đây
+   ]
+   ```
+5. Trong `HomePage.jsx`: thêm slug vào const `FEATURED` với section count.
+6. Trong `CategoryListPage.jsx`: thêm slug vào `DETAIL_SLUGS` Set.
+7. Không cần thêm route — `topics/:slug` đã bao phủ tất cả.
+8. Badge mới → thêm vào `BadgePill.jsx` colorMap.
 
 ---
 
-## 12. Files KHÔNG nên đọc lại
+## 12. SearchPage — Section Indexing (QUAN TRỌNG)
+
+`src/pages/SearchPage.jsx` index cả categories lẫn sections từ 3 data files.
+
+**Corpus** (module-level, khởi tạo 1 lần):
+```js
+const categoryItems = categories.map(c => ({ type: 'category', ...c }))
+const sectionItems  = [
+  ...buildSectionItems(redisData),       // 27 items
+  ...buildSectionItems(networkingData),  // 19 items
+  ...buildSectionItems(designPatternsData), // 14 items
+]
+const corpus = [...categoryItems, ...sectionItems]  // 74 items total
+```
+
+**Section item shape**:
+```js
+{
+  type: 'section',
+  id: '{slug}#{sectionId}',   // React key
+  slug, sectionId,
+  title, badge,
+  tags: [badge],
+  parentTitle,                 // "Caching — Redis Advanced" etc.
+  content: string,             // extracted từ text/subheading/warning/tip/list blocks
+}
+```
+
+**Fuse keys** (weighted): `title` 0.4 → `tags` 0.2 → `content` 0.2 → `subtitle` 0.1 → `subTopics` 0.05 → `parentTitle` 0.05. Threshold 0.35.
+
+**Result rendering**:
+- `type === 'category'` → `CategoryResultRow` (module numeral, tags với highlight)
+- `type === 'section'` → `SectionResultRow` (§ glyph, badge chip, "in {parentTitle}", link tới `/topics/{slug}#{sectionId}`)
+
+---
+
+## 13. Files KHÔNG nên đọc lại
 
 | File | Lý do |
 |---|---|
 | `src/data/categories.js` | Schema đã documented ở mục 4 |
 | `src/data/redis.js` | Structure đã documented ở mục 4 (file dài 1200+ dòng) |
+| `src/data/networking.js` | Cùng structure, 19 sections (dài ~1100 dòng) |
+| `src/data/designPatterns.js` | Cùng structure, 14 sections (dài ~2100 dòng) |
 | `src/pages/RoadmapPage.jsx` | Static data page, không có logic phức tạp |
 | `src/components/ui/ScrollToTop.jsx` | Simple scroll button |
 | `src/components/ui/ThemeToggle.jsx` | Simple toggle button |
