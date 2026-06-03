@@ -5,6 +5,7 @@ import { useCategoryBySlug } from '../hooks/useCategories'
 import { useProgress } from '../context/ProgressContext'
 import Breadcrumb from '../components/ui/Breadcrumb'
 import { redisData } from '../data/redis'
+import { networkingData } from '../data/networking'
 import { SectionBlock } from '../components/content/SectionBlock'
 import { RedisTOC } from '../components/content/RedisTOC'
 
@@ -36,9 +37,9 @@ function ProgressBar({ done, total }) {
   )
 }
 
-/* ─── Redis article hero ────────────────────────────────────── */
+/* ─── Article hero — shared by Redis & Networking pages ─────── */
 
-function RedisHero({ scrollPct }) {
+function ArticleHero({ data, scrollPct }) {
   return (
     <>
       <nav
@@ -54,23 +55,23 @@ function RedisHero({ scrollPct }) {
             Topics
           </Link>
           <span className="mx-2 shrink-0" aria-hidden="true">/</span>
-          <span className="text-primary truncate">{redisData.title}</span>
+          <span className="text-primary truncate">{data.title}</span>
         </span>
       </nav>
 
       <div className="border-b border-border mb-10">
-        <p className="font-serif text-accent text-lg font-bold">{redisData.module}</p>
+        <p className="font-serif text-accent text-lg font-bold">{data.module}</p>
 
-        <h1 className="font-serif font-bold text-3xl md:text-5xl text-primary tracking-tight mt-2 mb-4 leading-tight">
-          {redisData.title}
+        <h1 className="font-serif font-bold text-3xl sm:text-4xl md:text-5xl text-primary tracking-tight mt-2 mb-4 leading-tight">
+          {data.title}
         </h1>
 
         <p className="font-serif italic text-muted text-base sm:text-lg leading-relaxed max-w-2xl mb-6">
-          {redisData.description}
+          {data.description}
         </p>
 
         <div className="flex flex-wrap gap-2 mb-8">
-          {redisData.tags.map((tag) => (
+          {data.tags.map((tag) => (
             <span
               key={tag}
               className="font-sans text-xs border border-border text-muted px-2.5 py-1 rounded-sm"
@@ -81,7 +82,7 @@ function RedisHero({ scrollPct }) {
         </div>
 
         <div className="grid grid-cols-3 sm:flex sm:flex-wrap sm:gap-8 md:gap-12 gap-4 pt-6 border-t border-border pb-8">
-          {redisData.stats.map(({ num, label }) => (
+          {data.stats.map(({ num, label }) => (
             <div key={label}>
               <p className="font-serif text-3xl font-bold text-accent leading-none">{num}</p>
               <p className="font-mono text-xs uppercase tracking-widest text-faint mt-1">{label}</p>
@@ -279,6 +280,10 @@ export default function CategoryDetailPage() {
     return () => observer.disconnect()
   }, [slug])
 
+  const pageData = slug === 'caching-redis'  ? redisData
+                 : slug === 'networking'      ? networkingData
+                 : null
+
   /* ── 404 ──────────────────────────────────────────────────── */
 
   if (!category) {
@@ -300,14 +305,14 @@ export default function CategoryDetailPage() {
     )
   }
 
-  /* ── Redis detail page ────────────────────────────────────── */
+  /* ── Full-content article page (Redis, Networking, …) ────── */
 
-  if (slug === 'caching-redis') {
+  if (pageData) {
     return (
       <>
         <Helmet>
-          <title>Redis Advanced — JavaDev.wiki</title>
-          <meta name="description" content={redisData.description} />
+          <title>{pageData.title} — JavaDev.wiki</title>
+          <meta name="description" content={pageData.description} />
         </Helmet>
 
         {/* Reading progress — fixed just below navbar (52px mobile / 56px desktop) */}
@@ -322,13 +327,13 @@ export default function CategoryDetailPage() {
         </div>
 
         <div className="py-8 sm:py-12">
-          <RedisHero scrollPct={scrollPct} />
+          <ArticleHero data={pageData} scrollPct={scrollPct} />
 
           {/* Mobile TOC + metadata — hidden on md+ */}
           <div className="md:hidden mb-8">
-            <RedisTOC sections={redisData.sections} />
+            <RedisTOC sections={pageData.sections} />
             <p className="font-mono text-xs text-faint mt-2">
-              {redisData.sections.length} sections · ~45 min read
+              {pageData.sections.length} sections · ~{category.estimatedMinutes} min read
             </p>
           </div>
 
@@ -337,12 +342,12 @@ export default function CategoryDetailPage() {
 
             {/* Sidebar TOC — sticky, desktop only */}
             <aside className="hidden md:block">
-              <RedisTOC sections={redisData.sections} />
+              <RedisTOC sections={pageData.sections} />
             </aside>
 
             {/* Article content */}
             <article>
-              {redisData.sections.map((section) => (
+              {pageData.sections.map((section) => (
                 <SectionBlock key={section.id} section={section} />
               ))}
 

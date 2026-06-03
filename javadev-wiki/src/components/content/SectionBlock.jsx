@@ -8,6 +8,22 @@ import {
 } from './index'
 import { BadgePill } from './BadgePill'
 
+function GridBlock({ items }) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+      {items.map(({ title, body }, i) => (
+        <div
+          key={i}
+          className="border border-border rounded-sm p-4 hover:bg-surface transition-colors duration-150"
+        >
+          <p className="font-sans font-semibold text-sm text-primary mb-1">{title}</p>
+          <p className="font-serif italic text-sm text-muted leading-relaxed">{body}</p>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function renderBlock(block, i) {
   switch (block.type) {
     case 'text':       return <TextBlock key={i} value={block.value} />
@@ -17,6 +33,7 @@ function renderBlock(block, i) {
     case 'tip':        return <CalloutBlock key={i} type="tip" value={block.value} />
     case 'list':       return <ListBlock key={i} items={block.items} />
     case 'table':      return <TableBlock key={i} headers={block.headers} rows={block.rows} />
+    case 'grid':       return <GridBlock key={i} items={block.items} />
     default:           return null
   }
 }
